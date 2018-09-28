@@ -2,6 +2,8 @@
 // including support for LRU, Segmented LRU and TinyLFU.
 package cache
 
+import "context"
+
 // Key is any value which is comparable.
 // See http://golang.org/ref/spec#Comparison_operators for details.
 type Key interface{}
@@ -26,6 +28,9 @@ type Cache interface {
 	// InvalidateAll discards all entries.
 	InvalidateAll()
 
+	// InvalidateNow discards cached value of the given Key now
+	InvalidateNow(Key)
+
 	// Stats copies cache statistics to given Stats pointer.
 	Stats(*Stats)
 
@@ -44,8 +49,8 @@ type LoadingCache interface {
 
 	// Get returns value associated with Key or call underlying LoaderFunc
 	// to load value if it is not present.
-	Get(Key) (Value, error)
+	Get(ctx context.Context, key Key) (Value, error)
 }
 
 // LoaderFunc retrieves the value corresponding to given Key.
-type LoaderFunc func(Key) (Value, error)
+type LoaderFunc func(ctx context.Context, key Key) (Value, error)

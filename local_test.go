@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"sync"
@@ -133,7 +134,7 @@ func TestClose(t *testing.T) {
 
 func TestLoadingCache(t *testing.T) {
 	loadCount := 0
-	loader := func(k Key) (Value, error) {
+	loader := func(ctx context.Context, k Key) (Value, error) {
 		loadCount++
 		if k.(int)%2 != 0 {
 			return nil, errors.New("odd")
@@ -147,7 +148,7 @@ func TestLoadingCache(t *testing.T) {
 	c := NewLoadingCache(loader, withInsertionListener(insFunc))
 	defer c.Close()
 	wg.Add(1)
-	v, err := c.Get(2)
+	v, err := c.Get(nil, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +159,7 @@ func TestLoadingCache(t *testing.T) {
 		t.Fatalf("unexpected load count: %v", loadCount)
 	}
 	wg.Wait()
-	v, err = c.Get(2)
+	v, err = c.Get(nil, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +169,7 @@ func TestLoadingCache(t *testing.T) {
 	if loadCount != 1 {
 		t.Fatalf("unexpected load count: %v", loadCount)
 	}
-	v, err = c.Get(1)
+	v, err = c.Get(nil, 1)
 	if err == nil || err.Error() != "odd" {
 		t.Fatalf("expected error: %v", err)
 	}
@@ -176,7 +177,7 @@ func TestLoadingCache(t *testing.T) {
 	wg.Wait()
 }
 
-func simpleLoader(k Key) (Value, error) {
+func simpleLoader(ctx context.Context, k Key) (Value, error) {
 	return k, nil
 }
 
@@ -189,7 +190,7 @@ func TestCacheStats(t *testing.T) {
 	defer c.Close()
 
 	wg.Add(1)
-	_, err := c.Get("x")
+	_, err := c.Get(nil, "x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +200,7 @@ func TestCacheStats(t *testing.T) {
 		t.Fatalf("unexpected stats: %+v", st)
 	}
 	wg.Wait()
-	_, err = c.Get("x")
+	_, err = c.Get(nil, "x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +253,7 @@ func TestExpireAfterAccess(t *testing.T) {
 
 func TestExpireAfterWrite(t *testing.T) {
 	loadCount := 0
-	loader := func(k Key) (Value, error) {
+	loader := func(ctx context.Context, k Key) (Value, error) {
 		loadCount++
 		return loadCount, nil
 	}
@@ -267,7 +268,7 @@ func TestExpireAfterWrite(t *testing.T) {
 	defer c.Close()
 
 	wg.Add(1)
-	v, err := c.Get("refresh")
+	v, err := c.Get(nil, "refresh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +278,7 @@ func TestExpireAfterWrite(t *testing.T) {
 	}
 
 	mockTime.add(1 * time.Second)
-	v, err = c.Get("refresh")
+	v, err = c.Get(nil, "refresh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +288,7 @@ func TestExpireAfterWrite(t *testing.T) {
 
 	mockTime.add(1 * time.Nanosecond)
 	wg.Add(1)
-	v, err = c.Get("refresh")
+	v, err = c.Get(nil, "refresh")
 	if err != nil {
 		t.Fatal(err)
 	}
